@@ -1,5 +1,5 @@
 ---
-title: "Data Visualization Project - Out-of-school rate per education level in Luxembourg"
+title: "Data Visualization Project - Global out-of-school rate analysis"
 name: "Oliver JACK"
 data: 2023-11-21
 ---
@@ -12,6 +12,8 @@ install.packages("ggplot2")
 install.packages("forcats")
 install.packages("rworldmap")
 install.packages("gganimate")
+install.packages("RColorBrewer")
+install.packages("broom")
 ```
 
 ```{r}
@@ -25,6 +27,8 @@ library(ggplot2)
 library(forcats)
 library(rworldmap)
 library(gganimate)
+library(RColorBrewer)
+library(broom)
 ```
 
 ### Tidying data set
@@ -35,233 +39,389 @@ education <- read_csv("data/country_by_continent.csv", show_col_types = FALSE) |
 
 education <- education |>
   pivot_longer(cols = c(4:ncol(education)),
-               names_to = "Year",
-               values_to = "Values")|>
+               names_to = "year",
+               values_to = "values")|>
   pivot_wider(names_from = Series,
-              values_from = Values) |>
+              values_from = values) |>
   filter(if_any(starts_with("Out-of-school"), ~!is.na(.))) |>
-  mutate(Year = as.integer(Year)) |>
-  rename("country" = `Country`,
-         "continent" = Continent,
-         "year" = Year,
-         "gdp per capita (in $)" = `GDP per capita (current US$)`,
-         "oos lower secondary (m & f)" = `Out-of-school adolescents of lower secondary school age, both sexes (number)`,
-         "oos lower secondary (f)" = `Out-of-school adolescents of lower secondary school age, female (number)`,
-         "oos lower secondary (m)" = `Out-of-school adolescents of lower secondary school age, male (number)`,
-         "oos primary (m & f)" = `Out-of-school children of primary school age, both sexes (number)`,
-         "oos primary (f)" = `Out-of-school children of primary school age, female (number)`,
-         "oos primary (m)" = `Out-of-school children of primary school age, male (number)`,
-         "oos upper secondary (m & f)" = `Out-of-school youth of upper secondary school age, both sexes (number)`,
-         "oos upper secondary (f)" = `Out-of-school youth of upper secondary school age, female (number)`,
-         "oos upper secondary (m)" = `Out-of-school youth of upper secondary school age, male (number)`,
-         "tot. lower secondary (m & f)" = `School age population, lower secondary education, both sexes (number)`,
-         "tot. lower secondary (f)" = `School age population, lower secondary education, female (number)`,
-         "tot. lower secondary (m)" = `School age population, lower secondary education, male (number)`,
-         "tot. primary (m & f)" = `School age population, primary education, both sexes (number)`,
-         "tot. primary (f)" = `School age population, primary education, female (number)`,
-         "tot. primary (m)" = `School age population, primary education, male (number)`,
-         "tot. upper secondary (m & f)" = `School age population, upper secondary education, both sexes (number)`,
-         "tot. upper secondary (f)" = `School age population, upper secondary education, female (number)`,
-         "tot. upper secondary (m)" = `School age population, upper secondary education, male (number)`,
-         "avg. years of schooling (m & f)" = `UIS: Mean years of schooling (ISCED 1 or higher), population 25+ years, both sexes`,
-         "avg. years of schooling (f)" = `UIS: Mean years of schooling (ISCED 1 or higher), population 25+ years, female`,
-         "avg. years of schooling (m)" = `UIS: Mean years of schooling (ISCED 1 or higher), population 25+ years, male`,
-         "unemployment % (m & f)" = `Unemployment, total (% of total labor force)`,
-         "unemployment % (f)" = `Unemployment, female (% of female labor force)`,
-         "unemployment % (m)" = `Unemployment, male (% of male labor force)`) |>
-  mutate(`oos % primary (f)` = `oos primary (f)`/`tot. primary (f)`,
-         `oos % primary (m)` = `oos primary (m)`/`tot. primary (m)`,
-         `oos % primary (m & f)` = `oos primary (m & f)`/`tot. primary (m & f)`,
-         `oos % lower secondary (f)` = `oos lower secondary (f)`/`tot. lower secondary (f)`,
-         `oos % lower secondary (m)` = `oos lower secondary (m)`/`tot. lower secondary (m)`,
-         `oos % lower secondary (m & f)` = `oos lower secondary (m & f)`/`tot. lower secondary (m & f)`,
-         `oos % upper secondary (f)` = `oos upper secondary (f)`/`tot. upper secondary (f)`,
-         `oos % upper secondary (m)` = `oos upper secondary (m)`/`tot. upper secondary (m)`,
-         `oos % upper secondary (m & f)` = `oos upper secondary (m & f)`/`tot. upper secondary (m & f)`,
-         .after = year)
+  mutate(year = as.integer(year)) |>
+  rename(country = `Country`,
+         continent = Continent,
+         gdp_pc = `GDP per capita (current US$)`,
+         oos_lower = `Out-of-school adolescents of lower secondary school age, both sexes (number)`,
+         oos_lower_f = `Out-of-school adolescents of lower secondary school age, female (number)`,
+         oos_lower_m = `Out-of-school adolescents of lower secondary school age, male (number)`,
+         oos_primary = `Out-of-school children of primary school age, both sexes (number)`,
+         oos_primary_f = `Out-of-school children of primary school age, female (number)`,
+         oos_primary_m = `Out-of-school children of primary school age, male (number)`,
+         oos_upper = `Out-of-school youth of upper secondary school age, both sexes (number)`,
+         oos_upper_f = `Out-of-school youth of upper secondary school age, female (number)`,
+         oos_upper_m = `Out-of-school youth of upper secondary school age, male (number)`,
+         tot_lower = `School age population, lower secondary education, both sexes (number)`,
+         tot_lower_f = `School age population, lower secondary education, female (number)`,
+         tot_lower_m = `School age population, lower secondary education, male (number)`,
+         tot_primary = `School age population, primary education, both sexes (number)`,
+         tot_primary_f = `School age population, primary education, female (number)`,
+         tot_primary_m = `School age population, primary education, male (number)`,
+         tot_upper = `School age population, upper secondary education, both sexes (number)`,
+         tot_upper_f = `School age population, upper secondary education, female (number)`,
+         tot_upper_m = `School age population, upper secondary education, male (number)`,
+         avg_yos = `UIS: Mean years of schooling (ISCED 1 or higher), population 25+ years, both sexes`,
+         avg_yos_f = `UIS: Mean years of schooling (ISCED 1 or higher), population 25+ years, female`,
+         avg_yos_m = `UIS: Mean years of schooling (ISCED 1 or higher), population 25+ years, male`,
+         unemployment_p = `Unemployment, total (% of total labor force)`,
+         unemployment_p_f = `Unemployment, female (% of female labor force)`,
+         unemployment_p_m = `Unemployment, male (% of male labor force)`)
 ```
 
-### Generating data subsets
+### Adding aggregated columns to tibble
+
+```{r}
+rate_calculator <- function(row){
+  numerator <- 0
+  denominator <- 0
+  numerator_m <- 0
+  denominator_m <- 0
+  numerator_f <- 0
+  denominator_f <- 0
+  if (!is.na(row[["oos_primary"]]) & !is.na(row[["tot_primary"]])) {
+    numerator <- numerator + row[["oos_primary"]]
+    denominator <- denominator + row[["tot_primary"]]
+  }
+  if (!is.na(row[["oos_primary_m"]]) & !is.na(row[["tot_primary_m"]])) {
+    numerator_m <- numerator_m + row[["oos_primary_m"]]
+    denominator_m <- denominator_m + row[["tot_primary_m"]]
+  }
+  if (!is.na(row[["oos_primary_f"]]) & !is.na(row[["tot_primary_f"]])) {
+    numerator_f <- numerator_f + row[["oos_primary_f"]]
+    denominator_f <- denominator_f + row[["tot_primary_f"]]
+  }
+  if (!is.na(row[["oos_lower"]]) & !is.na(row[["tot_lower"]])) {
+    numerator <- numerator + row[["oos_lower"]]
+    denominator <- denominator + row[["tot_lower"]]
+  }
+  if (!is.na(row[["oos_lower_m"]]) & !is.na(row[["tot_lower_m"]])) {
+    numerator_m <- numerator_m + row[["oos_lower_m"]]
+    denominator_m <- denominator_m + row[["tot_lower_m"]]
+  }
+  if (!is.na(row[["oos_lower_f"]]) & !is.na(row[["tot_lower_f"]])) {
+    numerator_f <- numerator_f + row[["oos_lower_f"]]
+    denominator_f <- denominator_f + row[["tot_lower_f"]]
+  }
+  if (!is.na(row[["oos_upper"]]) & !is.na(row[["tot_upper"]])) {
+    numerator <- numerator + row[["oos_upper"]]
+    denominator <- denominator + row[["tot_upper"]]
+  }
+  if (!is.na(row[["oos_upper_m"]]) & !is.na(row[["tot_upper_m"]])) {
+    numerator_m <- numerator_m + row[["oos_upper_m"]]
+    denominator_m <- denominator_m + row[["tot_upper_m"]]
+  }
+  if (!is.na(row[["oos_upper_f"]]) & !is.na(row[["tot_upper_f"]])) {
+    numerator_f <- numerator_f + row[["oos_upper_f"]]
+    denominator_f <- denominator_f + row[["tot_upper_f"]]
+  }
+  return(c(if (numerator != 0 && denominator != 0) c(numerator, denominator) else c(NA, NA),
+           if (numerator_m != 0 && denominator_m != 0) c(numerator_m, denominator_m) else c(NA, NA),
+           if (numerator_f != 0 && denominator_f != 0) c(numerator_f, denominator_f) else c(NA, NA)))
+}
+
+education$oos <- NA
+education$tot <- NA
+education$oos_rate <- NA
+education$oos_m <- NA
+education$tot_m <- NA
+education$oos_rate_m <- NA
+education$oos_f <- NA
+education$tot_f <- NA
+education$oos_rate_f <- NA
+
+for (i in 1:nrow(education)) {
+  result <- rate_calculator(education[i, ])
+  education$oos[i] <- result[1]
+  education$tot[i] <- result[2]
+  education$oos_rate[i] <- ifelse(!is.na(result[1]), result[1]/result[2], NA)
+  education$oos_m[i] <- result[3]
+  education$tot_m[i] <- result[4]
+  education$oos_rate_m[i] <- ifelse(!is.na(result[3]), result[3]/result[4], NA)
+  education$oos_f[i] <- result[5]
+  education$tot_f[i] <- result[6]
+  education$oos_rate_f[i] <- ifelse(!is.na(result[5]), result[5]/result[6], NA)
+}
+
+# education$oos_rate <- apply(education, 1, rate_calculator)
+```
+
+### Function generating data subsets
+
+```{r}
+summariser <- function(level, ..., gender = FALSE){
+  group <- enquos(...)
+  if (level == "primary") {
+    if (!gender) {
+      return(education |>
+               filter(!is.na(oos_primary) & !is.na(tot_primary)) |>
+               group_by(!!!group) |>
+               summarise(primary = sum(oos_primary)/sum(tot_primary)))
+    }
+    return(education |>
+             filter(!is.na(oos_primary_m) & !is.na(oos_primary_f) & !is.na(tot_primary_m) & !is.na(tot_primary_f)) |>
+             group_by(!!!group) |>
+             summarise(primary_male = sum(oos_primary_m)/sum(tot_primary_m), primary_female = sum(oos_primary_f)/sum(tot_primary_f)))
+  }
+  if (level == "lower") {
+    if (!gender) {
+      return(education |>
+               filter(!is.na(oos_lower) & !is.na(tot_lower)) |>
+               group_by(!!!group) |>
+               summarise(lower = sum(oos_lower)/sum(tot_lower)))
+    }
+    return(education |>
+             filter(!is.na(oos_lower_m) & !is.na(oos_lower_f) & !is.na(tot_lower_m) & !is.na(tot_lower_f)) |>
+             group_by(!!!group) |>
+             summarise(lower_male = sum(oos_lower_m)/sum(tot_lower_m), lower_female = sum(oos_lower_f)/sum(tot_lower_f)))
+  }
+  if (level == "upper") {
+    if (!gender) {
+      return(education |>
+               filter(!is.na(oos_upper) & !is.na(tot_upper)) |>
+               group_by(!!!group) |>
+               summarise(upper = sum(oos_upper)/sum(tot_upper)))
+    }
+    return(education |>
+             filter(!is.na(oos_upper_m) & !is.na(oos_upper_f) & !is.na(tot_upper_m) & !is.na(tot_upper_f)) |>
+             group_by(!!!group) |>
+             summarise(upper_male = sum(oos_upper_m)/sum(tot_upper_m), upper_female = sum(oos_upper_f)/sum(tot_upper_f)))
+  }
+}
+```
+
+### Global out-of-school rate by education level
+
+```{r}
+summariser("primary", year) |>
+  full_join(summariser("lower", year), by = "year") |>
+  full_join(summariser("upper", year), by = "year") |>
+  pivot_longer(!year, names_to = "level", values_to = "values") |>
+  ggplot(aes(x = year, y = values, colour = level)) +
+  geom_point() +
+  facet_wrap(~ factor(level,
+                      levels = c("primary", "lower", "upper"),
+                      labels = c("Primary", "Lower Secondary", "Upper Secondary"))) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(title = "Worldwide out-of-school rate by education level",
+       subtitle = "Annual average from 1970-2020") +
+  scale_x_continuous(breaks = seq(1970, 2020, by = 10)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 100))
+```
+
+### Out-of-school rate by continent & education level
+
+```{r}
+summariser("primary", continent, year) |>
+  full_join(summariser("lower", continent, year), by = c("continent", "year")) |>
+  full_join(summariser("upper", continent, year), by = c("continent", "year")) |>
+  pivot_longer(!c(continent, year), names_to = "level", values_to = "values") |>
+  ggplot(aes(x = year, y = values, colour = level)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(factor(level,
+                    levels = c("primary", "lower", "upper"),
+                    labels = c("Primary", "Lower Secondary", "Upper Secondary")) ~ continent, ) +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  labs(title = "Out-of-school rate by continent & education level",
+       subtitle = "Annual average from 1970-2020") +
+  scale_x_continuous(breaks = c(1980, 2010)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 100))
+```
+
+### Top 30 countries with highest primary school out-of-school rate
 
 ```{r}
 primary <- education |>
-  filter(!is.na(`oos primary (m & f)`) & !is.na(`tot. primary (m & f)`)) |>
-  select(country, continent, year, contains("primary"))
+  filter(!is.na(oos_primary) & !is.na(tot_primary)) |>
+  select(contains("primary"))
 
-lower_secondary <- education |>
-  filter(!is.na(`oos lower secondary (m & f)`) & !is.na(`tot. lower secondary (m & f)`)) |>
-  select(country, continent, year, contains("lower secondary"))
+global_avg <- sum(primary$oos_primary)/sum(primary$tot_primary)
 
-upper_secondary <- education |>
-  filter(!is.na(`oos upper secondary (m & f)`) & !is.na(`tot. upper secondary (m & f)`)) |>
-  select(country, continent, year, contains("upper secondary"))
-```
-
-### Global out-of-school rate per education level
-
-```{r}
-primary_world <- primary |>
-  group_by(year) |>
-  summarise("primary" = sum(`oos primary (m & f)`)/sum(`tot. primary (m & f)`))
-
-lower_secondary_world <- lower_secondary |>
-  group_by(year) |>
-  summarise("lower secondary" = sum(`oos lower secondary (m & f)`)/sum(`tot. lower secondary (m & f)`))
-
-upper_secondary_world <- upper_secondary |>
-  group_by(year) |>
-  summarise("upper secondary" = sum(`oos upper secondary (m & f)`)/sum(`tot. upper secondary (m & f)`))
-
-as_tibble(list(primary_world, lower_secondary_world, upper_secondary_world) |>
-  reduce(full_join, by = "year") |>
-  pivot_longer(!year, names_to = "level", values_to = "values")) |>
-  ggplot(aes(x = year, y = values, colour = level)) +
-  geom_point() +
-  facet_wrap(~ factor(level, levels = c("primary", "lower secondary", "upper secondary"))) +
-  theme(legend.position = "none",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  labs(title = "Global out-of-school rate per education level",
-       subtitle = "Annual average from 1970-2020") +
-  scale_x_continuous(breaks = seq(1970, 2020, by = 10))
-```
-
-### Out-of-school rate per continent & education level
-
-```{r}
-primary_continent <- primary |>
-  group_by(continent, year) |>
-  summarise("primary" = sum(`oos primary (m & f)`)/sum(`tot. primary (m & f)`))
-
-lower_secondary_continent <- lower_secondary |>
-  group_by(continent, year) |>
-  summarise("lower secondary" = sum(`oos lower secondary (m & f)`)/sum(`tot. lower secondary (m & f)`))
-
-upper_secondary_continent <- upper_secondary |>
-  group_by(continent, year) |>
-  summarise("upper secondary" = sum(`oos upper secondary (m & f)`)/sum(`tot. upper secondary (m & f)`))
-
-as_tibble(list(primary_continent, lower_secondary_continent, upper_secondary_continent) |>
-  reduce(full_join, by = c("continent", "year")) |>
-  pivot_longer(!c(continent, year), names_to = "level", values_to = "values")) |>
-  mutate(level = fct_relevel(level, "primary", "lower secondary", "upper secondary")) |>
-  ggplot(aes(x = year, y = values, colour = level)) +
-  geom_point() +
-  facet_grid(level ~ continent) +
-  theme(legend.position = "none",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  labs(title = "Out-of-school rate per continent & education level",
-       subtitle = "Annual average from 1970-2020") +
-  scale_x_continuous(breaks = c(1980, 2010))
-```
-
-```{r}
-as_tibble(list(primary_continent, lower_secondary_continent, upper_secondary_continent) |>
-  reduce(full_join, by = c("continent", "year")) |>
-  pivot_longer(!c(continent, year), names_to = "level", values_to = "values")) |>
-  mutate(level = fct_relevel(level, "primary", "lower secondary", "upper secondary")) |>
-  ggplot(aes(x = continent, y = values, fill = level)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  theme(axis.title.x = element_blank(),
-      axis.title.y = element_blank()) +
-  labs(title = "Out-of-school rate per continent & education level",
-     subtitle = "Average from 1970-2020",
-     fill = "Education level")
-```
-
-### Countries with highest primary school out-of-school rate
-
-```{r}
-country_continent <- primary |>
-  group_by(country, continent) |>
-  summarise("primary" = sum(`oos primary (m & f)`)/sum(`tot. primary (m & f)`)) |>
+summariser("primary", country, continent) |>
   arrange(desc(primary)) |>
-  head(n = 30)
-
-country_continent |>
-ggplot(aes(x = primary, y = fct_rev(fct_infreq(country, w = primary)), fill = continent)) + 
+  head(n = 30) |>
+  ggplot(aes(x = primary, y = fct_reorder(country, primary), fill = continent)) + 
   geom_bar(stat = "identity") + 
-  labs(title = "Countries with highest primary school out-of-school rate",
+  geom_vline(xintercept = global_avg, linetype = "dashed") +
+  geom_text(aes(x = global_avg + 0.07, label = "world avg.", y = 15.2), size = 3.5) +
+  labs(title = "Top 30 countries with highest primary school out-of-school rate",
        subtitle = "Average from 1970-2020",
        fill = "Continent") +
-  theme(legend.position = "bottom",
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank())
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = c(0.85, 0.2)) +
+  scale_x_continuous(labels = scales::percent_format(scale = 100),
+                     breaks = c(global_avg, seq(0, 1, by = 0.20)))
 ```
 
 ### World map of primary school out-of-school rates (avg. from 1970-2020)
 
 ```{r}
-primary_country <- primary |>
-  group_by(country) |>
-  summarise("primary" = sum(`oos primary (m & f)`)/sum(`tot. primary (m & f)`))
+country_data <- joinCountryData2Map(summariser("primary", country), joinCode = "NAME", nameJoinColumn = "country")
 
-country_data <- joinCountryData2Map(primary_country, joinCode = "NAME", nameJoinColumn = "country")
-
-par(mar=c(0, 0, 0, 0))
+par(mar = c(0, 0, 0, 0))
 
 mapCountryData(country_data, 
-nameColumnToPlot="primary", 
-mapTitle="World map of primary school out-of-school rates (avg. from 1970-2020)",
-colourPalette = "heat", 
-oceanCol="lightblue", 
-missingCountryCol="grey65", 
+nameColumnToPlot = "primary", 
+mapTitle = "",
+colourPalette = brewer.pal(brewer.pal.info["Reds", "maxcolors"], "Reds"), 
+oceanCol = "lightblue", 
+missingCountryCol = "grey65", 
 catMethod = "pretty")
 ```
 
 ### Annual male/female out-of-school ratio in primary school
 
 ```{r}
-primary |>
-  filter(!is.na(`oos primary (m)`) & !is.na(`oos primary (f)`)) |>
-  group_by(year) |>
-  summarise(male = sum(`oos primary (m)`),
-            female = sum(`oos primary (f)`)) |>
+summariser("primary", year, gender = TRUE) |>
   pivot_longer(!year,
                names_to = "gender",
-               values_to = "proportion") |>
+               values_to = "proportion",
+               names_prefix = "primary_") |>
   ggplot(aes(x = proportion, y = fct_rev(as.factor(year)), fill = gender)) +
   geom_bar(stat = "identity", position = "fill") +
-  labs(title = "Annual male/female out-of-school ratio in primary school",
+  geom_vline(xintercept = 0.5, linetype = "dashed") +
+  labs(title = "Worldwide annual male/female out-of-school ratio in primary school",
        fill = "Gender") +
-  scale_x_continuous(labels = scales::percent_format(scale = 1)) +
+  scale_x_continuous(labels = scales::percent_format(scale = 100)) +
   theme(legend.position = "bottom",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  scale_y_discrete(breaks = as.character(seq(1970, 2020, by = 10)))
+  scale_y_discrete(breaks = as.character(seq(1970, 2020, by = 10))) +
+  scale_fill_discrete(breaks = c("male", "female"))
 ```
 
-### Out-of-school rate per education level in Luxembourg
+### Top 10 countries with highest out-of-school rate gender disparity
 
 ```{r}
-primary_lux <- primary |>
-  filter(country == "Luxembourg") |>
-  group_by(year) |>
-  summarise("primary" = sum(`oos primary (m & f)`)/sum(`tot. primary (m & f)`))
-
-lower_secondary_lux <- lower_secondary |>
-  filter(country == "Luxembourg") |>
-  group_by(year) |>
-  summarise("lower secondary" = sum(`oos lower secondary (m & f)`)/sum(`tot. lower secondary (m & f)`))
-
-upper_secondary_lux <- upper_secondary |>
-  filter(country == "Luxembourg") |>
-  group_by(year) |>
-  summarise("upper secondary" = sum(`oos upper secondary (m & f)`)/sum(`tot. upper secondary (m & f)`))
-
-as_tibble(list(primary_lux, lower_secondary_lux, upper_secondary_lux) |>
-  reduce(full_join, by = "year") |>
-  pivot_longer(!year, names_to = "level", values_to = "values")) |>
-  ggplot(aes(x = year, y = values, colour = level)) +
-  geom_point() +
-  facet_wrap(~ factor(level, levels = c("primary", "lower secondary", "upper secondary"))) +
-  theme(legend.position = "none",
+education |>
+  filter(!is.na(oos_rate) & !is.na(oos_rate_m) & !is.na(oos_rate_f)) |>
+  group_by(country, continent) |>
+  summarise(oos_rate = sum(oos) / sum(tot), oos_rate_m = sum(oos_m) / sum(tot_m), oos_rate_f = sum(oos_f) / sum(tot_f)) |>
+  mutate(delta = abs(oos_rate_m - oos_rate_f)) |>
+  arrange(desc(delta)) |>
+  head(10) |>
+  pivot_longer(starts_with("oos"), names_to = "gender", values_to = "values") |>
+  ggplot(aes(x = values, y = fct_reorder(country, delta))) +
+  geom_line(size = 1.5, alpha = 0.5) +
+  geom_point(aes(colour = factor(gender,
+                      levels = c("oos_rate", "oos_rate_m", "oos_rate_f"),
+                      labels = c("overall", "male", "female")),
+                 shape = continent), size = 4) +
+  geom_vline(xintercept = global_avg, linetype = "dashed") +
+  geom_text(aes(x = global_avg + 0.07, label = "world avg.", y = 8), size = 3.5) +
+  labs(title = "Top 10 countries with highest out-of-school rate gender disparity",
+       subtitle = "Average from 1970-2020",
+       colour = "Gender",
+       shape = "Continent") +
+  theme(legend.position = "bottom",
         axis.title.x = element_blank(),
-        axis.text.x = element_text(hjust = 0.7),
-        axis.title.y = element_blank()) +
-  labs(title = "Out-of-school rate per education level in Luxembourg",
-       subtitle = "Annual average from 1970-2020") +
-  scale_x_continuous(breaks = seq(1970, 2020, by = 10),
-                     guide = guide_axis(n.dodge = 2))
+        axis.title.y = element_blank(),
+        panel.grid.minor.x = element_blank()) +
+  scale_x_continuous(labels = scales::percent_format(scale = 100),
+                     breaks = c(global_avg, seq(0, 1, by = 0.20))) +
+  scale_color_manual(values = c("overall" = "#50C878",
+                                "male" = "#6fa8dc",
+                                "female" = "#d5a6bd"))
+```
+
+### Correlation between out-of-school rate, GDP (per capita) & unemployment rate
+
+```{r}
+education2 <- filter(education, !is.na(oos_rate) & !is.na(gdp_pc))
+
+education2 |>
+  filter(!is.na(unemployment_p)) |>
+  group_by(country, continent) |>
+  summarise(gdp_avg = mean(gdp_pc), oos_rate = sum(oos) / sum(tot), tot = sum(tot), unemployment_avg = mean(unemployment_p)) |>
+  ggplot(aes(x = gdp_avg, y = oos_rate, colour = continent, size = unemployment_avg)) +
+  geom_point() +
+  labs(title = "Correlation between out-of-school rate, GDP (per capita) & unemployment rate",
+       subtitle = "Each point represents a country's average from 1970-2020",
+       x = "GDP (per capita, in $)",
+       y = "Out-of-school rate",
+       colour = "Continent",
+       size = "Unemployment rate") +
+  scale_x_log10(labels = scales::comma_format()) +
+  scale_y_continuous(labels = scales::percent_format(scale = 100)) +
+  scale_size_continuous(labels = scales::percent_format(scale = 1))
+```
+
+### Animation of correlation between out-of-school rate & GDP (per capita) from 1970-2018
+
+```{r}
+education2 |>
+  ggplot(aes(x = gdp_pc, y = oos_rate, colour = continent, size = tot)) +
+  transition_time(year) +
+  ease_aes("linear") +
+  scale_size(range = c(2, 12)) +
+  geom_point() +
+  theme_bw(16) +
+  labs(title = "Year: {frame_time}", 
+       x = "GDP per capita", 
+       y = "life expectancy") +
+  theme(legend.position = "none") +
+  scale_x_log10() -> p
+
+animate(p)
+# anim_save("education_gdp.gif")
+```
+
+### R<sup>2</sup> value for linear model of each country
+
+```{r}
+models <- education |>
+  group_by(country) |>
+  filter(n() >= 20) |>
+  ungroup() |>
+  nest_by(country, continent) |>
+  mutate(model = list(lm(oos_rate ~ year, data = data)),
+         coeff = coef(model)[2],
+         rsq = pluck(glance(model), "r.squared"))
+
+models |>
+  ggplot(aes(x = rsq, y = fct_reorder(country, rsq))) +
+  geom_point(aes(colour = continent), 
+             alpha = 0.7, size = 2) +
+  labs(title = expression(R^2 ~ "value for linear model of each country"),
+     subtitle = "Only considering countries that have reported for more than 20 years",
+     x = expression(R^2),
+     y = "Country",
+     color = "Continent",
+     parse = TRUE) +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = c(0.85, 0.3))
+```
+
+### Out-of-school rate by country with highest R<sup>2</sup> value
+
+```{r}
+models |>
+  filter(rsq > 0.8) |>
+  arrange(desc(rsq)) |>
+  head(10) |>
+  ungroup() |>
+  unnest(data) |>
+  ggplot(aes(x = year, y = oos_rate)) +
+  geom_line(aes(colour = country)) +
+  facet_wrap(vars(country), nrow = 2) +
+  labs(title = expression("Out-of-school rate by country with highest " ~ R^2 ~ "value"),
+       subtitle = "Annual average from 1970-2020",
+       parse = TRUE) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        legend.position = "none") +
+  scale_x_continuous(breaks = c(1980, 2010)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 100))
 ```
