@@ -126,7 +126,7 @@ for (i in 1:nrow(education)) {
   education$oos_rate[i] <- ifelse(!is.na(result[1]), result[1]/result[2], NA)
 }
 
-# education$oos_rate <- apply(education, 1, rate_calculator)
+# I was unable to implement it using the `apply` function.
 ```
 
 ### Function generating data subsets
