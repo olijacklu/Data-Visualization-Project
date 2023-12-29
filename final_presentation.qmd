@@ -1,14 +1,15 @@
 ---
-title: "Data Visualization Project - Global out-of-school rate analysis"
-name: "Oliver JACK"
-date: 2023-11-21
-editor_options: 
-chunk_output_type: inline
+title: "Global out-of-school rate analysis"
+subtitle: "Data Visualization Project"
+author: "Oliver JACK"
+format:
+  revealjs: 
+    theme: black
 ---
 
-### Setup
+## Libraries 
 
-```{r installation}
+```{r installation, output=FALSE}
 install.packages("tidyverse")
 install.packages("ggplot2")
 install.packages("forcats")
@@ -22,12 +23,12 @@ install.packages("gifski")
 install.packages("patchwork")
 ```
 
-```{r renv}
+```{r renv, output=FALSE}
 renv::restore()
 renv::snapshot()
 ```
 
-```{r libraries}
+```{r libraries, echo=TRUE, output=FALSE}
 library(tidyverse)
 library(ggplot2)
 library(forcats)
@@ -41,7 +42,7 @@ library(gifski)
 library(patchwork)
 ```
 
-```{r colour scales}
+```{r colour scales, output=FALSE}
 scale_colour_continuous <- scale_colour_viridis_c
 scale_colour_discrete <- scale_colour_viridis_d
 scale_colour_binned <- scale_colour_viridis_b
@@ -50,12 +51,10 @@ scale_fill_continuous <- scale_fill_viridis_c
 scale_fill_discrete <- scale_fill_viridis_d
 scale_fill_binned <- scale_fill_viridis_b
 
-theme_set(theme_bw())
+theme_set(theme_bw(base_size = 12))
 ```
 
-### Tidying data frame
-
-```{r tidying}
+```{r tidying, output=FALSE}
 unfiltered_education <- read_csv("data/country_by_continent.csv", show_col_types = FALSE) |>
   inner_join(read_csv("data/education_data.csv", show_col_types = FALSE), join_by("Country" == "Country Name")) |>
   pivot_longer(cols = matches("^\\d{4}$"),
@@ -96,9 +95,7 @@ education <- unfiltered_education |>
   filter(if_any(starts_with("oos"), ~!is.na(.)))
 ```
 
-### Adding aggregated columns to data frame
-
-```{r aggregate columns}
+```{r aggregate columns, output=FALSE}
 rate_calculator <- function(row){
   numerator <- 0
   denominator <- 0
@@ -127,13 +124,9 @@ for (i in 1:nrow(education)) {
   education$tot[i] <- result[2]
   education$oos_rate[i] <- ifelse(!is.na(result[1]), result[1]/result[2], NA)
 }
-
-# Unfortunately, I was unable to implement it using the `apply` function.
 ```
 
-### Function generating data subsets
-
-```{r generating function}
+```{r generating function, output=FALSE}
 summariser <- function(level, ..., gender = FALSE){
   group <- enquos(...)
   if (level == "primary") {
@@ -175,7 +168,25 @@ summariser <- function(level, ..., gender = FALSE){
 }
 ```
 
-### Out-of-school rate by continent & education level
+## Data set
+
+- Sources: *The World Bank* & *UNESCO*
+- Provides out-of school data by country & year
+- Out-of school child = child that doesn't attend a school of any form, regardless of the reason
+
+```{r}
+summary(read_csv("data/education_data.csv", show_col_types = FALSE))
+```
+
+## Plot efforts
+
+1. Global overview of evolution of out-of school rate
+2. Gender disparity of out-of school rate around the world
+3. Correlation between out-of school rate & year, GDP per capita & unemployment rate
+
+# Plot effort #1:<br>General overview
+
+---
 
 ```{r plot1}
 summariser("primary", continent, year) |>
@@ -196,7 +207,7 @@ summariser("primary", continent, year) |>
   scale_y_continuous(labels = scales::percent_format(scale = 100))
 ```
 
-### World map of primary out-of school rate by country
+---
 
 ```{r plot2}
 data <- education |>
@@ -222,7 +233,7 @@ getMap(resolution = "low") |>
         legend.position = "bottom")
 ```
 
-### Top 30 countries with the highest primary out-of-school rate from 2010-2019
+---
 
 ```{r plot3}
 world_avg <- sum(data$oos_primary) / sum(data$tot_primary)
@@ -244,7 +255,9 @@ summarised_data |>
                      breaks = c(world_avg, seq(0, 1, by = 0.20)))
 ```
 
-### Distribution of out-of-school rate by continent & gender
+# Plot effort #2:<br>Gender disparity
+
+---
 
 ```{r plot4}
 summariser("primary", country, continent, year, gender = TRUE) |>
@@ -265,7 +278,7 @@ summariser("primary", country, continent, year, gender = TRUE) |>
   scale_y_continuous(labels = scales::percent_format(scale = 100))
 ```
 
-### Annual male/female primary out-of-school ratio per continent
+---
 
 ```{r plot5}
 summariser("primary", continent, year, gender = TRUE) |>
@@ -284,7 +297,7 @@ summariser("primary", continent, year, gender = TRUE) |>
   scale_y_continuous(labels = scales::percent_format(scale = 100))
 ```
 
-### Top 10 countries with highest out-of-school rate gender disparity
+---
 
 ```{r plot6}
 education |>
@@ -315,7 +328,9 @@ education |>
   scale_colour_continuous(labels = scales::percent_format(scale = 100))
 ```
 
-### R<sup>2</sup> value for linear model of each country
+# Plot effort #3:<br>Correlation analysis
+
+---
 
 ```{r plot7}
 models <- education |>
@@ -343,7 +358,7 @@ models |>
   scale_x_continuous(breaks = seq(0, 1, by = 0.2))
 ```
 
-### Out-of-school rate by country with highest R<sup>2</sup> value
+---
 
 ```{r plot8}
 models |>
@@ -366,7 +381,7 @@ models |>
   scale_y_continuous(labels = scales::percent_format(scale = 100))
 ```
 
-### Animation of correlation between out-of-school rate & GDP per capita from 1970-2018
+---
 
 ```{r plot9}
 education |>
@@ -388,7 +403,7 @@ animate(p, renderer = gifski_renderer())
 anim_save("oos_gdp.gif")
 ```
 
-### Animation of correlation between out-of-school rate & unemployment rate from 1970-2018
+---
 
 ```{r plot10}
 education |>
@@ -409,3 +424,5 @@ education |>
 animate(q, renderer = gifski_renderer())
 anim_save("oos_unemployment.gif")
 ```
+
+# Thank you for your attention!
