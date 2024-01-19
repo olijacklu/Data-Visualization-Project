@@ -287,7 +287,7 @@ summariser("primary", continent, year, gender = TRUE) |>
   geom_smooth(aes(group = continent), se = FALSE) +
   geom_hline(yintercept = 0.5, linetype = "dashed") +
   facet_wrap(~ continent) +
-  labs(title = "Female proportion of primary out-of school students per continent",
+  labs(title = "Proportion of primary out-of school students that are female, by continent",
        subtitle = "Annual average from 1970-2020",
        colour = "Continent") +
   theme(legend.position = "none",
@@ -312,20 +312,18 @@ education |>
   geom_line(linewidth = 1, alpha = 0.5) +
   geom_point(aes(shape = factor(gender,
                       levels = c("primary_f", "primary_m", "primary"),
-                      labels = c("female", "male", "overall")),
-                 colour = delta), size = 4) +
+                      labels = c("female", "male", "overall"))), size = 4) +
   geom_vline(xintercept = world_avg, linetype = "dashed") +
   geom_text(aes(x = world_avg + 0.06, label = "world avg.", y = 4), size = 3.5) +
-  labs(title = "Top 10 countries with highest out-of-school rate gender disparity",
+  labs(title = "Top 10 countries with highest primary out-of-school rate gender disparity",
        subtitle = "Average from 2010-2019",
-       colour = "% difference",
        shape = "Gender") +
-  theme(axis.title.x = element_blank(),
+  theme(plot.title = element_text(size = 10.9),
+        axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         panel.grid.minor.x = element_blank()) +
   scale_x_continuous(labels = scales::percent_format(scale = 100),
-                     breaks = c(world_avg, seq(0.2, 1, by = 0.1))) +
-  scale_colour_continuous(labels = scales::percent_format(scale = 100))
+                     breaks = c(world_avg, seq(0.2, 1, by = 0.1)))
 ```
 
 # Plot effort #3:<br>Correlation analysis
@@ -346,7 +344,7 @@ models |>
   ggplot(aes(x = rsq, y = fct_reorder(country, rsq))) +
   geom_point(aes(colour = continent), 
              alpha = 0.7, size = 2) +
-  labs(title = expression(R^2 ~ "value for linear model of each country"),
+  labs(title = expression(R^2 ~ "value for linear model of each country, out-of-school % ~ year"),
      subtitle = "Only considering countries that have reported for over 20 years",
      x = expression(R^2),
      y = "Country",
@@ -386,16 +384,17 @@ models |>
 ```{r plot9}
 education |>
   filter(!is.na(oos_rate) & !is.na(gdp_pc)) |>
-  ggplot(aes(x = gdp_pc, y = oos_rate, colour = continent)) +
+  ggplot(aes(x = gdp_pc, y = oos_rate, colour = continent, size = tot)) +
   geom_point() +
-  scale_size(range = c(2, 12)) +
   labs(title = "Correlation between out-of-school rate & GDP per capita in {frame_time}", 
        x = "GDP per capita", 
        y = "Out-of school rate",
-       colour = "Continent") +
+       colour = "Continent",
+       size = "Population") +
   theme(plot.title = element_text(size = 14)) +
   scale_x_log10(labels = scales::label_comma()) +
   scale_y_continuous(labels = scales::percent_format(scale = 100)) +
+  scale_size(range = c(2, 12), labels = scales::label_comma()) +
   transition_time(year) +
   ease_aes("linear") -> p
 
@@ -408,16 +407,17 @@ anim_save("oos_gdp.gif")
 ```{r plot10}
 education |>
   filter(!is.na(oos_rate) & !is.na(unemployment_p)) |>
-  ggplot(aes(x = unemployment_p, y = oos_rate, colour = continent)) +
+  ggplot(aes(x = unemployment_p, y = oos_rate, colour = continent, size = tot)) +
   geom_point() +
-  scale_size(range = c(2, 12)) +
   labs(title = "Correlation between out-of-school rate & unemployment rate in {frame_time}", 
        x = "Unemployment rate", 
        y = "Out-of school rate",
-       colour = "Continent") +
+       colour = "Continent",
+       size = "Population") +
   theme(plot.title = element_text(size = 14)) +
   scale_x_continuous(labels = scales::percent_format(scale = 1)) +
   scale_y_continuous(labels = scales::percent_format(scale = 100)) +
+  scale_size(range = c(2, 12), labels = scales::label_comma()) +
   transition_time(year) +
   ease_aes("linear") -> q
 
