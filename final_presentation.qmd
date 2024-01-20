@@ -5,7 +5,16 @@ author: "Oliver JACK"
 format:
   revealjs: 
     theme: black
+    slide-number: true
 ---
+
+## Introduction
+
+- analysis of the global out-of-school rates from 1970-2020
+- out-of school child = child that doesn't attend a school of any form, regardless of the reason
+- goal: understand evolution of out-of-school rate by country & gender, study linear relationship between out-of-school rate & year, GDP per capita, unemployment rate
+- source of dataset: *The World Bank* & *UNESCO*
+- dataset provides out-of school data by country & year
 
 ## Libraries 
 
@@ -51,7 +60,7 @@ scale_fill_continuous <- scale_fill_viridis_c
 scale_fill_discrete <- scale_fill_viridis_d
 scale_fill_binned <- scale_fill_viridis_b
 
-theme_set(theme_bw(base_size = 12))
+theme_set(theme_bw())
 ```
 
 ```{r tidying, output=FALSE}
@@ -168,27 +177,30 @@ summariser <- function(level, ..., gender = FALSE){
 }
 ```
 
-## Data set
+## Dataset summary
 
-- Sources: *The World Bank* & *UNESCO*
-- Provides out-of school data by country & year
-- Out-of school child = child that doesn't attend a school of any form, regardless of the reason
+| Property | Value |
+|----------|-------|
+| Rows | 10800 |
+| Columns | 28 |
+| Countries | 200 |
+| Country with most reports | Australia (47) |
+| Countries with 0 reports | 4 |
+| Luxembourg # of reports | 33 |
+| Year with most reports | 2015 (144) |
+| Year with fewest reports | 1970 (16) |
 
-```{r}
-summary(read_csv("data/education_data.csv", show_col_types = FALSE))
-```
-
-## Plot efforts
+## Plot efforts overview
 
 1. Global overview of evolution of out-of school rate
 2. Gender disparity of out-of school rate around the world
-3. Correlation between out-of school rate & year, GDP per capita & unemployment rate
+3. Correlation between out-of school rate & year, GDP per capita, unemployment rate
 
 # Plot effort #1:<br>General overview
 
 ---
 
-```{r plot1}
+```{r plot_effort1, fig.width=15, fig.height=12, fig.align='center'}
 summariser("primary", continent, year) |>
   full_join(summariser("lower", continent, year), by = c("continent", "year")) |>
   full_join(summariser("upper", continent, year), by = c("continent", "year")) |>
@@ -204,12 +216,8 @@ summariser("primary", continent, year) |>
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
   scale_x_continuous(breaks = c(1980, 2010)) +
-  scale_y_continuous(labels = scales::percent_format(scale = 100))
-```
+  scale_y_continuous(labels = scales::percent_format(scale = 100)) -> p1
 
----
-
-```{r plot2}
 data <- education |>
   filter(year >= 2010 & year <= 2019 & !is.na(oos_primary))
 
@@ -230,12 +238,8 @@ getMap(resolution = "low") |>
        subtitle = "Average from 2010-2019") +
   theme_void() +
   theme(legend.title = element_blank(),
-        legend.position = "bottom")
-```
+        legend.position = "bottom") -> p2
 
----
-
-```{r plot3}
 world_avg <- sum(data$oos_primary) / sum(data$tot_primary)
 
 summarised_data |>
@@ -245,21 +249,23 @@ summarised_data |>
   geom_bar(stat = "identity") + 
   geom_vline(xintercept = world_avg, linetype = "dashed", colour = "white") +
   geom_text(aes(x = world_avg + 0.05, label = "world avg.", y = 15.2), size = 3.5, colour = "white") +
-  labs(title = "Top 30 countries with the highest primary out-of-school rate",
+  labs(title = "Top 30 countries with highest primary out-of-school rate",
        subtitle = "Average from 2010-2019",
        fill = "Continent") +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         legend.position = c(0.85, 0.2)) +
   scale_x_continuous(labels = scales::percent_format(scale = 100),
-                     breaks = c(world_avg, seq(0, 1, by = 0.20)))
+                     breaks = c(world_avg, seq(0, 1, by = 0.20))) -> p3
+
+(p1 | p3) / p2
 ```
 
 # Plot effort #2:<br>Gender disparity
 
 ---
 
-```{r plot4}
+```{r plot_effort2, fig.width=16, fig.height=11, fig.align='center'}
 summariser("primary", country, continent, year, gender = TRUE) |>
   filter((year >= 1980 & year <= 1989) | (year >= 2010 & year <= 2019)) |>
   pivot_longer(cols = starts_with("primary"),
@@ -275,31 +281,23 @@ summariser("primary", country, continent, year, gender = TRUE) |>
        colour = "Gender") +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  scale_y_continuous(labels = scales::percent_format(scale = 100))
-```
+  scale_y_continuous(labels = scales::percent_format(scale = 100)) -> p4
 
----
-
-```{r plot5}
 summariser("primary", continent, year, gender = TRUE) |>
   mutate(female_proportion = primary_female / (primary_male + primary_female)) |>
   ggplot(aes(x = factor(year), y = female_proportion, colour = continent)) +
   geom_smooth(aes(group = continent), se = FALSE) +
   geom_hline(yintercept = 0.5, linetype = "dashed") +
   facet_wrap(~ continent) +
-  labs(title = "Proportion of primary out-of school students that are female, by continent",
-       subtitle = "Annual average from 1970-2020",
+  labs(title = "Proportion of primary out-of school students that are female",
+       subtitle = "Annual average from 1970-2020, by continent",
        colour = "Continent") +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
   scale_x_discrete(breaks = seq(1975, 2015, by = 10)) +
-  scale_y_continuous(labels = scales::percent_format(scale = 100))
-```
+  scale_y_continuous(labels = scales::percent_format(scale = 100)) -> p5
 
----
-
-```{r plot6}
 education |>
   filter(year >= 2010 & year <= 2019 & !is.na(oos_primary) & !is.na(oos_primary_f) & !is.na(oos_primary_m)) |>
   group_by(country, continent) |>
@@ -314,7 +312,7 @@ education |>
                       levels = c("primary_f", "primary_m", "primary"),
                       labels = c("female", "male", "overall"))), size = 4) +
   geom_vline(xintercept = world_avg, linetype = "dashed") +
-  geom_text(aes(x = world_avg + 0.06, label = "world avg.", y = 4), size = 3.5) +
+  geom_text(aes(x = world_avg + 0.03, label = "world avg.", y = 4), size = 3.5) +
   labs(title = "Top 10 countries with highest primary out-of-school rate gender disparity",
        subtitle = "Average from 2010-2019",
        shape = "Gender") +
@@ -323,14 +321,16 @@ education |>
         axis.title.y = element_blank(),
         panel.grid.minor.x = element_blank()) +
   scale_x_continuous(labels = scales::percent_format(scale = 100),
-                     breaks = c(world_avg, seq(0.2, 1, by = 0.1)))
+                     breaks = c(world_avg, seq(0.2, 1, by = 0.1))) -> p6
+
+(p4 | p5) / p6
 ```
 
 # Plot effort #3:<br>Correlation analysis
 
 ---
 
-```{r plot7}
+```{r plot_effort3_1, fig.width=13, fig.height=11, fig.align='center'}
 models <- education |>
   group_by(country) |>
   filter(n() >= 20) |>
@@ -353,12 +353,8 @@ models |>
   theme(axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
         legend.position = c(0.87, 0.3)) +
-  scale_x_continuous(breaks = seq(0, 1, by = 0.2))
-```
+  scale_x_continuous(breaks = seq(0, 1, by = 0.2)) -> p7
 
----
-
-```{r plot8}
 models |>
   filter(rsq > 0.8) |>
   arrange(desc(rsq)) |>
@@ -376,12 +372,14 @@ models |>
         axis.title.y = element_blank(),
         legend.position = "none") +
   scale_x_continuous(breaks = c(1980, 2010)) +
-  scale_y_continuous(labels = scales::percent_format(scale = 100))
+  scale_y_continuous(labels = scales::percent_format(scale = 100)) -> p8
+
+p7 / p8
 ```
 
 ---
 
-```{r plot9}
+```{r plot_effort3_2, fig.align='center'}
 education |>
   filter(!is.na(oos_rate) & !is.na(gdp_pc)) |>
   ggplot(aes(x = gdp_pc, y = oos_rate, colour = continent, size = tot)) +
@@ -396,15 +394,15 @@ education |>
   scale_y_continuous(labels = scales::percent_format(scale = 100)) +
   scale_size(range = c(2, 12), labels = scales::label_comma()) +
   transition_time(year) +
-  ease_aes("linear") -> p
+  ease_aes("linear") -> p9
 
-animate(p, renderer = gifski_renderer())
+animate(p9, renderer = gifski_renderer())
 anim_save("oos_gdp.gif")
 ```
 
 ---
 
-```{r plot10}
+```{r plot_effort3_3, fig.align='center'}
 education |>
   filter(!is.na(oos_rate) & !is.na(unemployment_p)) |>
   ggplot(aes(x = unemployment_p, y = oos_rate, colour = continent, size = tot)) +
@@ -419,9 +417,9 @@ education |>
   scale_y_continuous(labels = scales::percent_format(scale = 100)) +
   scale_size(range = c(2, 12), labels = scales::label_comma()) +
   transition_time(year) +
-  ease_aes("linear") -> q
+  ease_aes("linear") -> p10
 
-animate(q, renderer = gifski_renderer())
+animate(p10, renderer = gifski_renderer())
 anim_save("oos_unemployment.gif")
 ```
 

@@ -6,6 +6,8 @@ editor_options:
 chunk_output_type: inline
 ---
 
+This markdown file consists of all the exploratory work I did for my project.
+
 ### Setup
 
 The following packages are the ones I used for my project:
