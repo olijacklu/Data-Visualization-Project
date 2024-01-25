@@ -12,9 +12,7 @@ format:
 
 - analysis of the global out-of-school rates from 1970-2020
 - out-of school child = child that doesn't attend a school of any form, regardless of the reason
-- goal: understand evolution of out-of-school rate by country & gender, study linear relationship between out-of-school rate & year, GDP per capita, unemployment rate
 - source of dataset: *The World Bank* & *UNESCO*
-- dataset provides out-of school data by country & year
 
 ## Libraries 
 
@@ -186,17 +184,11 @@ summariser <- function(level, ..., gender = FALSE){
 | Countries | 200 |
 | Country with most reports | Australia (47) |
 | Countries with 0 reports | 4 |
-| Luxembourg # of reports | 33 |
+| Luxembourg reports | 33 |
 | Year with most reports | 2015 (144) |
 | Year with fewest reports | 1970 (16) |
 
-## Plot efforts overview
-
-1. Global overview of evolution of out-of school rate
-2. Gender disparity of out-of school rate around the world
-3. Correlation between out-of school rate & year, GDP per capita, unemployment rate
-
-# Plot effort #1:<br>General overview
+# General overview
 
 ---
 
@@ -261,7 +253,7 @@ summarised_data |>
 (p1 | p3) / p2
 ```
 
-# Plot effort #2:<br>Gender disparity
+# Gender disparity
 
 ---
 
@@ -325,7 +317,7 @@ education |>
 (p4 | p5) / p6
 ```
 
-# Plot effort #3:<br>Correlation analysis
+# Correlation analysis
 
 ---
 
@@ -395,7 +387,7 @@ education |>
   transition_time(year) +
   ease_aes("linear") -> p9
 
-animate(p9, renderer = gifski_renderer())
+animate(p9, renderer = gifski_renderer(), fps = 5)
 anim_save("oos_gdp.gif")
 ```
 
@@ -418,7 +410,7 @@ education |>
   transition_time(year) +
   ease_aes("linear") -> p10
 
-animate(p10, renderer = gifski_renderer())
+animate(p10, renderer = gifski_renderer(), fps = 5)
 anim_save("oos_unemployment.gif")
 ```
 

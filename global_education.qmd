@@ -331,7 +331,7 @@ education |>
   labs(title = "Top 10 countries with highest primary out-of-school rate gender disparity",
        subtitle = "Average from 2010-2019",
        shape = "Gender") +
-  theme(plot.title = element_text(size = 10.9),
+  theme(plot.title = element_text(size = 11.7),
         axis.title.x = element_blank(),
         axis.title.y = element_blank(),
         panel.grid.minor.x = element_blank(),
@@ -418,7 +418,7 @@ education |>
   transition_time(year) +
   ease_aes("linear") -> p
 
-animate(p, renderer = gifski_renderer())
+animate(p, renderer = gifski_renderer(), fps = 5)
 anim_save("oos_gdp.gif")
 ```
 
@@ -443,6 +443,6 @@ education |>
   transition_time(year) +
   ease_aes("linear") -> q
 
-animate(q, renderer = gifski_renderer())
+animate(q, renderer = gifski_renderer(), fps = 5)
 anim_save("oos_unemployment.gif")
 ```
