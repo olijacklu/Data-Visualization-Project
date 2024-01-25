@@ -410,7 +410,7 @@ education |>
        x = "GDP per capita", 
        y = "Out-of school rate",
        colour = "Continent",
-       size = "Population") +
+       size = "School pop.") +
   theme(plot.title = element_text(size = 14)) +
   scale_x_log10(labels = scales::label_comma()) +
   scale_y_continuous(labels = scales::percent_format(scale = 100)) +
@@ -435,7 +435,7 @@ education |>
        x = "Unemployment rate", 
        y = "Out-of school rate",
        colour = "Continent",
-       size = "Population") +
+       size = "School pop.") +
   theme(plot.title = element_text(size = 14)) +
   scale_x_continuous(labels = scales::percent_format(scale = 1)) +
   scale_y_continuous(labels = scales::percent_format(scale = 100)) +
